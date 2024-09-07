@@ -1,0 +1,16 @@
+{
+  "name": "whatsapp-wikipedia-bot",
+  "version": "1.0.0",
+  "description": "A WhatsApp bot that responds to Wikipedia queries.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@adiwajshing/baileys": "^6.1.0",
+    "axios": "^1.2.3",
+    "wikipedia": "^1.0.4"
+  },
+  "author": "",
+  "license": "ISC"
+}
