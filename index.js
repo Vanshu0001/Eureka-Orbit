@@ -20,7 +20,7 @@ async function startBot() {
     // Create a new WhatsApp connection
     const conn = makeWASocket({
         auth: state,
-        printQRInTerminal: false  // Disable QR code printing
+        printQRInTerminal: true  // Disable QR code printing
     });
 
     // Event handler for authentication
