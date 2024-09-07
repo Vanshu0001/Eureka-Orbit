@@ -1,55 +1,48 @@
-const { default: makeWASocket, useSingleFileAuthState } = require('@adiwajshing/baileys');
-const axios = require('axios');
-const { state, saveState } = useSingleFileAuthState('./auth_info.json');
+const { makeWASocket, useSingleFileAuthState, DisconnectReason } = require('@adiwajshing/baileys');
+const fs = require('fs');
+const path = require('path');
+const readline = require('readline');
 
-const wikipedia = require('wikipedia');
+// Path to store the authentication details
+const AUTH_PATH = path.join(__dirname, 'auth_info.json');
 
+// Initialize readline interface for OTP input
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
+// Function to start the WhatsApp bot
 async function startBot() {
-    const sock = makeWASocket({
+    // Load or initialize authentication state
+    const { state, saveCreds } = useSingleFileAuthState(AUTH_PATH);
+
+    // Create a new WhatsApp connection
+    const conn = makeWASocket({
         auth: state,
-        printQRInTerminal: true
+        printQRInTerminal: false  // Disable QR code printing
     });
 
-    sock.ev.on('messages.upsert', async (m) => {
-        const message = m.messages[0];
-        if (!message.message || message.key.fromMe) return;
+    // Event handler for authentication
+    conn.ev.on('creds.update', saveCreds);
 
-        const from = message.key.remoteJid;
-        const textMessage = message.message.conversation || message.message.extendedTextMessage?.text;
+    // Event handler for new messages
+    conn.ev.on('messages.upsert', (m) => {
+        console.log('New message received:', m);
+        // Handle incoming messages here
+    });
 
-        if (textMessage && textMessage.startsWith('.question ')) {
-            const query = textMessage.replace('.question ', '').trim();
-            
-            try {
-                const page = await wikipedia.page(query);
-                const summary = await page.summary();
-                
-                if (summary.extract) {
-                    await sock.sendMessage(from, { text: summary.extract.substring(0, 4000) }); // Sends up to 4000 characters
-                } else {
-                    await sock.sendMessage(from, { text: "No information found for that query on Wikipedia." });
-                }
-            } catch (error) {
-                console.error(error);
-                await sock.sendMessage(from, { text: "Error fetching data. Please try again." });
-            }
+    // Prompt user for OTP and proceed with authentication
+    rl.question('Please enter the OTP sent to your number: ', async (otp) => {
+        try {
+            await conn.login({ phoneNumber: '+919992546793', otp }); // Replace with your number
+            console.log('Successfully logged in!');
+            rl.close();
+        } catch (error) {
+            console.error('Login failed:', error);
         }
     });
-
-    sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect } = update;
-        if (connection === 'close') {
-            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log('Connection closed, reconnecting ', shouldReconnect);
-            if (shouldReconnect) {
-                startBot();
-            }
-        } else if (connection === 'open') {
-            console.log('Bot is online!');
-        }
-    });
-
-    sock.ev.on('creds.update', saveState);
 }
 
-startBot();
+// Start the bot
+startBot().catch(console.error);
